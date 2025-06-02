@@ -6,6 +6,8 @@
  // |                                                | //
  // -------------------------------------------------- */
 
+// Version: 1.1
+
 #ifndef __W5500_CONFIG_H
 #define __W5500_CONFIG_H
 #ifdef __cplusplus
