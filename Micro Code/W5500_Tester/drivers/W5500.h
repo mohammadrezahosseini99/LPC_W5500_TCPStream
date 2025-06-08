@@ -93,7 +93,7 @@ typedef enum {
 
 typedef struct {
 	SPI_Type *base;
-	spi_master_handle_t handle;
+	spi_master_handle_t *handle;
 	uint8_t *regsAdd;
 	size_t regsSize;
 	volatile W5500_spiStatus_t spiStatus;
@@ -111,13 +111,13 @@ typedef struct {
 	W5500_con_t con;
 	W5500_portIP_t portIP;
 	volatile W5500_status_t status;
-	void (*delay_ms)(uint32_t ms);
+	void (*delay_ms)(uint64_t ms);
 	void (*delay_us)(uint64_t us);
 } W5500_t;
 
 // Functions
 void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, int32_t port, uint32_t linkPort, uint32_t linkPin);
-bool W5500_InitFull(W5500_t *instance, SPI_Type *base, void (*delay_ms)(uint32_t ms), void (*delay_us)(uint64_t us));
+bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint64_t ms), void (*delay_us)(uint64_t us));
 void W5500_InitMinBlocking(W5500_t *instance);
 void W5500_spiCallBack(W5500_t *instance);
 bool W5500_statusReadBlocking(W5500_t *instance, uint8_t *data, uint16_t maxDataSize, uint16_t *dataSize, bool autoInit);

@@ -24,13 +24,14 @@ void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, int
 	instance->con.linkPin = linkPin;
 }
 
-bool W5500_InitFull(W5500_t *instance, SPI_Type *base, void (*delay_ms)(uint32_t ms), void (*delay_us)(uint64_t us)) {
+bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint64_t ms), void (*delay_us)(uint64_t us)) {
 	uint8_t macAddr[6] = {0xAA, 0xAF, 0xFA, 0xCC, 0xE3, 0x1C};
 	uint8_t subr[4] = {255, 255, 255, 0};
 	uint8_t port[2] = {((instance->portIP.port >> 8) & 0xFF), ((instance->portIP.port >> 0) & 0xFF)};
 	uint8_t dip[4] = {192, 168, 100, 22};
 	uint8_t rtr[2] = {((1000 >> 8) & 0xFF), ((1000 >> 0) & 0xFF)};
 	instance->con.base = base;
+	instance->con.handle = handle;
 	instance->delay_ms = delay_ms;
 	instance->delay_us = delay_us;
 	instance->con.spiStatus = do_nothing;
@@ -71,14 +72,17 @@ void W5500_InitMinBlocking(W5500_t *instance) {
 
 void _W5500_regWrite(W5500_t *instance, uint16_t reg, uint8_t blockSel, uint8_t data, bool blocking) {
 	spi_transfer_t xfer = {0};
-	uint8_t tx[4] = {((reg >> 8) & 0xFF), ((reg >> 0) & 0xFF), 0x04 | (blockSel << 3), data};
+	static uint8_t tx[4];
+	tx[0] = ((reg >> 8) & 0xFF);
+	tx[1] = ((reg >> 0) & 0xFF);
+	tx[2] = 0x04 | (blockSel << 3);
 	xfer.txData = tx;
 	xfer.rxData = NULL;
 	xfer.dataSize = 4;
 	xfer.configFlags = kSPI_FrameAssert;
 	while (instance->con.spiStatus != do_nothing);
 	instance->con.spiStatus = doing_regs;
-	while(SPI_MasterTransferNonBlocking(instance->con.base, &(instance->con.handle), &xfer) != kStatus_Success);
+	while(SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer) != kStatus_Success);
 	if(blocking) {
 		while (instance->con.spiStatus != do_nothing);
 	}
@@ -86,22 +90,28 @@ void _W5500_regWrite(W5500_t *instance, uint16_t reg, uint8_t blockSel, uint8_t 
 
 uint8_t _W5500_regRead(W5500_t *instance, uint16_t reg, uint8_t blockSel) {
 	spi_transfer_t xfer = {0};
-	uint8_t tx[4] = {((reg >> 8) & 0xFF), ((reg >> 0) & 0xFF), 0x00 | (blockSel << 3)};
-	uint8_t rx[4];
+	static uint8_t tx[4];
+	tx[0] = ((reg >> 8) & 0xFF);
+	tx[1] = ((reg >> 0) & 0xFF);
+	tx[2] = 0x00 | (blockSel << 3);
+	static uint8_t rx[4];
 	xfer.txData = tx;
 	xfer.rxData = rx;
 	xfer.dataSize = 4;
 	xfer.configFlags = kSPI_FrameAssert;
 	while (instance->con.spiStatus != do_nothing);
 	instance->con.spiStatus = doing_regs;
-	while(SPI_MasterTransferNonBlocking(instance->con.base, &(instance->con.handle), &xfer) != kStatus_Success);
+	while(SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer) != kStatus_Success);
 	while (instance->con.spiStatus != do_nothing);
 	return rx[3];
 }
 
 void _W5500_regsWrite(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking) {
 	spi_transfer_t xfer = {0};
-	uint8_t tx[3] = {((startReg >> 8) & 0xFF), ((startReg >> 0) & 0xFF), 0x04 | (blockSel << 3)};
+	static uint8_t tx[3];
+	tx[0] = ((startReg >> 8) & 0xFF);
+	tx[1] = ((startReg >> 0) & 0xFF);
+	tx[2] = 0x04 | (blockSel << 3);
 	xfer.txData = tx;
 	xfer.rxData = NULL;
 	xfer.dataSize = 3;
@@ -109,7 +119,7 @@ void _W5500_regsWrite(W5500_t *instance, uint16_t startReg, uint8_t blockSel, ui
 	instance->con.regsSize = size;
 	while (instance->con.spiStatus != do_nothing);
 	instance->con.spiStatus = write_regs;
-	while(SPI_MasterTransferNonBlocking(instance->con.base, &(instance->con.handle), &xfer) != kStatus_Success);
+	while(SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer) != kStatus_Success);
 	if(blocking) {
 		while (instance->con.spiStatus != do_nothing);
 	}
@@ -117,7 +127,10 @@ void _W5500_regsWrite(W5500_t *instance, uint16_t startReg, uint8_t blockSel, ui
 
 void _W5500_regsRead(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking) {
 	spi_transfer_t xfer = {0};
-	uint8_t tx[3] = {((startReg >> 8) & 0xFF), ((startReg >> 0) & 0xFF), 0x00 | (blockSel << 3)};
+	static uint8_t tx[3];
+	tx[0] = ((startReg >> 8) & 0xFF);
+	tx[1] = ((startReg >> 0) & 0xFF);
+	tx[2] = 0x00 | (blockSel << 3);
 	xfer.txData = tx;
 	xfer.rxData = NULL;
 	xfer.dataSize = 3;
@@ -125,7 +138,7 @@ void _W5500_regsRead(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uin
 	instance->con.regsSize = size;
 	while (instance->con.spiStatus != do_nothing);
 	instance->con.spiStatus = read_regs;
-	while(SPI_MasterTransferNonBlocking(instance->con.base, &(instance->con.handle), &xfer) != kStatus_Success);
+	while(SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer) != kStatus_Success);
 	if(blocking) {
 		while (instance->con.spiStatus != do_nothing);
 	}
@@ -139,14 +152,14 @@ void W5500_spiCallBack(W5500_t *instance) {
 		xfer.dataSize = instance->con.regsSize;
 		xfer.configFlags = kSPI_FrameAssert;
 		instance->con.spiStatus = doing_regs;
-		SPI_MasterTransferNonBlocking(instance->con.base, &(instance->con.handle), &xfer);
+		SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer);
 	} else if (instance->con.spiStatus == read_regs) {
 		xfer.txData = NULL;
 		xfer.rxData = instance->con.regsAdd;
 		xfer.dataSize = instance->con.regsSize;
 		xfer.configFlags = kSPI_FrameAssert;
 		instance->con.spiStatus = doing_regs;
-		SPI_MasterTransferNonBlocking(instance->con.base, &(instance->con.handle), &xfer);
+		SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer);
 	} else {
 		instance->con.spiStatus = do_nothing;
 	}

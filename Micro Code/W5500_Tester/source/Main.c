@@ -45,6 +45,7 @@ volatile uint32_t g_systickCounter = 0;
 W5500_status_t status;
 uint8_t recData[MAX_REC];
 uint16_t recSize;
+spi_master_handle_t spi_handle;
 
 __DATA(SRAM2) W5500_t myW5500;
 
@@ -93,10 +94,10 @@ int main(void)
     userConfig.sselPol = (spi_spol_t)EXAMPLE_SPI_SPOL;
     userConfig.baudRate_Bps = 20000000U;
     SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq);
-    SPI_MasterTransferCreateHandle(EXAMPLE_SPI_MASTER, &(myW5500.con.handle), w5500_spi_Callback, NULL);
+    SPI_MasterTransferCreateHandle(EXAMPLE_SPI_MASTER, &spi_handle, w5500_spi_Callback, NULL);
 
     W5500_GetDefaultConfig(&myW5500, NULL, NULL, -1, BOARD_INITPINS_ETH_LINK_PORT, BOARD_INITPINS_ETH_LINK_PIN);
-    while(!W5500_InitFull(&myW5500, EXAMPLE_SPI_MASTER, SysTick_DelayTicks, NULL));
+    while(!W5500_InitFull(&myW5500, EXAMPLE_SPI_MASTER, &spi_handle, SysTick_DelayTicks, NULL));
 
     SysTick_DelayTicks(100);
     uint16_t cnt = 0, a;
