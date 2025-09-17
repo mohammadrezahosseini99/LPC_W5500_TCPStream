@@ -24,7 +24,7 @@ void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, int
 	instance->con.linkPin = linkPin;
 }
 
-bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint64_t ms), void (*delay_us)(uint64_t us)) {
+bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint32_t ms), void (*delay_us)(uint64_t us)) {
 	uint8_t macAddr[6] = {0xAA, 0xAF, 0xFA, 0xCC, 0xE3, 0x1C};
 	uint8_t subr[4] = {255, 255, 255, 0};
 	uint8_t port[2] = {((instance->portIP.port >> 8) & 0xFF), ((instance->portIP.port >> 0) & 0xFF)};
@@ -76,6 +76,7 @@ void _W5500_regWrite(W5500_t *instance, uint16_t reg, uint8_t blockSel, uint8_t 
 	tx[0] = ((reg >> 8) & 0xFF);
 	tx[1] = ((reg >> 0) & 0xFF);
 	tx[2] = 0x04 | (blockSel << 3);
+	tx[3] = data;
 	xfer.txData = tx;
 	xfer.rxData = NULL;
 	xfer.dataSize = 4;

@@ -19,7 +19,7 @@
 /* clang-format off */
 /* TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
 !!GlobalInfo
-product: Clocks v14.0
+product: Clocks v17.0
 processor: LPC54114J256
 package_id: LPC54114J256BD64
 mcu_data: ksdk2_0

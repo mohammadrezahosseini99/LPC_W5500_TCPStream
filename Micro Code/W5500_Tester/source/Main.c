@@ -18,11 +18,11 @@
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
-#define EXAMPLE_SPI_MASTER          SPI5
-#define EXAMPLE_SPI_MASTER_IRQ      FLEXCOMM5_IRQn
-#define EXAMPLE_SPI_MASTER_CLK_SRC  kCLOCK_Flexcomm5
-#define EXAMPLE_SPI_MASTER_CLK_FREQ CLOCK_GetFlexCommClkFreq(5)
-#define EXAMPLE_SPI_SSEL            2
+#define EXAMPLE_SPI_MASTER          SPI6
+#define EXAMPLE_SPI_MASTER_IRQ      FLEXCOMM6_IRQn
+#define EXAMPLE_SPI_MASTER_CLK_SRC  kCLOCK_Flexcomm6
+#define EXAMPLE_SPI_MASTER_CLK_FREQ CLOCK_GetFlexCommClkFreq(6)
+#define EXAMPLE_SPI_SSEL            1
 #define EXAMPLE_SPI_SPOL            kSPI_SpolActiveAllLow
 
 /*******************************************************************************
@@ -76,7 +76,7 @@ int main(void)
     CLOCK_AttachClk(BOARD_DEBUG_UART_CLK_ATTACH);
 
     /* attach 12 MHz clock to SPI3 */
-    CLOCK_AttachClk(kFRO12M_to_FLEXCOMM5);
+    CLOCK_AttachClk(kSYS_PLL_to_FLEXCOMM6);
 
     /* reset FLEXCOMM for SPI */
     RESET_PeripheralReset(kFC5_RST_SHIFT_RSTn);
