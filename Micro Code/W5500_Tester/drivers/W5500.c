@@ -2,7 +2,7 @@
 
 // Version: 1.1
 
-void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, int32_t port, uint32_t linkPort, uint32_t linkPin) {
+void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, uint8_t *MAC, int32_t port, uint32_t linkPort, uint32_t linkPin) {
 	if(IPv4 == NULL){
 		uint8_t IP[4] = W5500_DEFAULT_IPV4_ADDRESS;
 		memcpy(instance->portIP.IPv4, IP, 4);
@@ -15,6 +15,12 @@ void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, int
 	} else {
 		memcpy(instance->portIP.GWIP, GWIP, 4);
 	}
+	if(MAC == NULL){
+		uint8_t MACad[6] = W5500_DEFAULT_MAC_ADDRESS;
+		memcpy(instance->portIP.MAC, MACad, 6);
+	} else {
+		memcpy(instance->portIP.MAC, MAC, 6);
+	}
 	if (port < 0){
 		instance->portIP.port = W5500_DEFAULT_PORT;
 	} else {
@@ -25,7 +31,6 @@ void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, int
 }
 
 bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint32_t ms), void (*delay_us)(uint64_t us)) {
-	uint8_t macAddr[6] = {0xAA, 0xAF, 0xFA, 0xCC, 0xE3, 0x1C};
 	uint8_t subr[4] = {255, 255, 255, 0};
 	uint8_t port[2] = {((instance->portIP.port >> 8) & 0xFF), ((instance->portIP.port >> 0) & 0xFF)};
 	uint8_t dip[4] = {192, 168, 100, 22};
@@ -43,17 +48,17 @@ bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *hand
 		instance->delay_us(300 * 1000);
 	if(!_W5500_whoAmI(instance))
 		return false;
-	_W5500_regWrite(instance,	W5500_REG_PHYCFGR,	W5500_COMMON_REGS,		0xD8, 	 true);			// PHY set 100Mbs
-	_W5500_regsWrite(instance,	W5500_REG_SHAR_S,	W5500_COMMON_REGS,		macAddr, 6,		true);	// MAC Address
-	_W5500_regsWrite(instance,	W5500_REG_SUBR_S,	W5500_COMMON_REGS,		subr,	 4, 	true);	// Subnet Mask Address
-	_W5500_setIPAdd(instance,	instance->portIP.IPv4,		instance->portIP.GWIP);
-	_W5500_regWrite(instance,	W5500_SN_MR,		W5500_SOCKET_REGS(0),	0x01,	 true);			// Set the socket 0 mode to TCP
-	_W5500_regsWrite(instance,	W5500_SN_PORT_S,	W5500_SOCKET_REGS(0),	port,	 2, 	true);	// Socket n Source Port
-	_W5500_regsWrite(instance,	W5500_SN_DIPR_S,	W5500_SOCKET_REGS(0),	dip, 	 4,		true);	// Destination IP Address
-	_W5500_regsWrite(instance,	W5500_SN_DPORT_S,	W5500_SOCKET_REGS(0),	port, 	 2,		true);	// Destination Port
-	_W5500_regWrite(instance,	W5500_SN_RXBUF_SIZE,W5500_SOCKET_REGS(0),	0x08,	 true);			// Socket n RX Buffer Size Register
-	_W5500_regWrite(instance,	W5500_SN_TXBUF_SIZE,W5500_SOCKET_REGS(0),	0x08,	 true);			// Socket n TX Buffer Size Register
-	_W5500_regsWrite(instance,	W5500_RTR_S,		W5500_COMMON_REGS,		rtr, 	 2,		true);	// Retry Time-value Register
+	_W5500_regWrite(instance,	W5500_REG_PHYCFGR,		W5500_COMMON_REGS,		0xD8, 	 				true);			// PHY set 100Mbs
+	_W5500_regsWrite(instance,	W5500_REG_SHAR_S,		W5500_COMMON_REGS,		instance->portIP.MAC,	6,	true);	// MAC Address
+	_W5500_regsWrite(instance,	W5500_REG_SUBR_S,		W5500_COMMON_REGS,		subr,	 				4, 	true);	// Subnet Mask Address
+	_W5500_setIPAdd(instance,	instance->portIP.IPv4,	instance->portIP.GWIP);
+	_W5500_regWrite(instance,	W5500_SN_MR,			W5500_SOCKET_REGS(0),	0x01,	 					true);	// Set the socket 0 mode to TCP
+	_W5500_regsWrite(instance,	W5500_SN_PORT_S,		W5500_SOCKET_REGS(0),	port,	 				2, 	true);	// Socket n Source Port
+	_W5500_regsWrite(instance,	W5500_SN_DIPR_S,		W5500_SOCKET_REGS(0),	dip, 	 				4,	true);	// Destination IP Address
+	_W5500_regsWrite(instance,	W5500_SN_DPORT_S,		W5500_SOCKET_REGS(0),	port, 	 				2,	true);	// Destination Port
+	_W5500_regWrite(instance,	W5500_SN_RXBUF_SIZE,	W5500_SOCKET_REGS(0),	0x08,	 					true);	// Socket n RX Buffer Size Register
+	_W5500_regWrite(instance,	W5500_SN_TXBUF_SIZE,	W5500_SOCKET_REGS(0),	0x08,	 					true);	// Socket n TX Buffer Size Register
+	_W5500_regsWrite(instance,	W5500_RTR_S,			W5500_COMMON_REGS,		rtr, 	 				2,	true);	// Retry Time-value Register
 
 	_W5500_socketCommand(instance, 0, W5500_CR_CLOSE, true);
 	_W5500_socketCommand(instance, 0, W5500_CR_OPEN, true);
@@ -64,6 +69,7 @@ bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *hand
 
 void W5500_InitMinBlocking(W5500_t *instance) {
 	instance->status = config;
+	_W5500_regWrite(instance, W5500_SN_IR, W5500_SOCKET_REGS(0), 0x1F, true);
 	_W5500_socketCommand(instance, 0, W5500_CR_CLOSE, true);
 	_W5500_socketCommand(instance, 0, W5500_CR_OPEN, true);
 	_W5500_socketCommand(instance, 0, W5500_CR_LISTEN, true);
@@ -190,7 +196,6 @@ bool W5500_statusReadBlocking(W5500_t *instance, uint8_t *data, uint16_t maxData
 	wsr = (W5500_statusRead_t*)status;
 	if(instance->status != tcpError) {
 		_W5500_regsRead(instance, W5500_SN_IR, W5500_SOCKET_REGS(0), status, 2, true);
-		_W5500_regWrite(instance, W5500_SN_IR, W5500_SOCKET_REGS(0), 0x1F, 	 true);
 		if((wsr->status == W5500_SR_ESTABLISHED) && (!((GPIO_PinRead(GPIO, instance->con.linkPort, instance->con.linkPin) == 1) || (wsr->timeout)))) {
 			ret = true;
 			instance->status = clientConnected;
@@ -200,7 +205,7 @@ bool W5500_statusReadBlocking(W5500_t *instance, uint8_t *data, uint16_t maxData
 					*dataSize = W5500_dataRead(instance, data, maxDataSize);
 				}
 			}
-		} else if(wsr->status == W5500_SR_LISTEN) {
+		} else if((wsr->status == W5500_SR_LISTEN) || (wsr->status == W5500_SR_SYNRECV)){
 			instance->status = clientWait;
 		} else {
 			instance->status = tcpError;
@@ -221,6 +226,7 @@ uint16_t W5500_dataRead(W5500_t *instance, uint8_t *data, uint16_t maxDataSize) 
 	dataSize = (((uint16_t)regs[0]) << 8) | (((uint16_t)regs[1]) << 0);
 	if(dataSize <= maxDataSize) {
 		instance->status = clientConnected;
+		_W5500_regWrite(instance, W5500_SN_IR, W5500_SOCKET_REGS(0), 0x1F, true);
 	} else {
 		instance->status = dataReceived;
 		dataSize = maxDataSize;

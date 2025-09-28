@@ -71,6 +71,7 @@ extern "C" {
 #define W5500_SR_CLOSED				0x00
 #define W5500_SR_INIT				0x13
 #define W5500_SR_LISTEN				0x14
+#define W5500_SR_SYNRECV			0x16
 #define W5500_SR_ESTABLISHED		0x17
 #define W5500_SR_CLOSE_WAIT			0x1C
 
@@ -104,6 +105,7 @@ typedef struct {
 typedef struct {
 	uint8_t GWIP[4];
 	uint8_t IPv4[4];
+	uint8_t MAC[6];
 	uint16_t port;
 } W5500_portIP_t;
 
@@ -116,7 +118,7 @@ typedef struct {
 } W5500_t;
 
 // Functions
-void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, int32_t port, uint32_t linkPort, uint32_t linkPin);
+void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, uint8_t *MAC, int32_t port, uint32_t linkPort, uint32_t linkPin);
 bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint32_t ms), void (*delay_us)(uint64_t us));
 void W5500_InitMinBlocking(W5500_t *instance);
 void W5500_spiCallBack(W5500_t *instance);

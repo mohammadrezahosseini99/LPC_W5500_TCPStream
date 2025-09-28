@@ -96,7 +96,7 @@ int main(void)
     SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq);
     SPI_MasterTransferCreateHandle(EXAMPLE_SPI_MASTER, &spi_handle, w5500_spi_Callback, NULL);
 
-    W5500_GetDefaultConfig(&myW5500, NULL, NULL, -1, BOARD_INITPINS_ETH_LINK_PORT, BOARD_INITPINS_ETH_LINK_PIN);
+    W5500_GetDefaultConfig(&myW5500, NULL, NULL, NULL, -1, BOARD_INITPINS_ETH_LINK_PORT, BOARD_INITPINS_ETH_LINK_PIN);
     while(!W5500_InitFull(&myW5500, EXAMPLE_SPI_MASTER, &spi_handle, SysTick_DelayTicks, NULL));
 
     SysTick_DelayTicks(100);
