@@ -30,7 +30,7 @@ void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, uin
 	instance->con.linkPin = linkPin;
 }
 
-bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint32_t ms), void (*delay_us)(uint64_t us)) {
+bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint64_t ms), void (*delay_us)(uint64_t us)) {
 	uint8_t subr[4] = {255, 255, 255, 0};
 	uint8_t port[2] = {((instance->portIP.port >> 8) & 0xFF), ((instance->portIP.port >> 0) & 0xFF)};
 	uint8_t dip[4] = {192, 168, 100, 22};

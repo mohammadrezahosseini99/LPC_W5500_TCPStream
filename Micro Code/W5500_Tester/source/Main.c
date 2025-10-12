@@ -36,7 +36,7 @@
 static uint8_t srcBuff[BUFFER_SIZE];
 static uint8_t destBuff[BUFFER_SIZE];
 
-volatile uint32_t g_systickCounter = 0;
+volatile uint64_t g_systickCounter = 0;
 /*******************************************************************************
  * Code
  ******************************************************************************/
@@ -54,7 +54,7 @@ static void w5500_spi_Callback(SPI_Type *base, spi_master_handle_t *handle,
 	W5500_spiCallBack(&myW5500);
 }
 
-void SysTick_DelayTicks(uint32_t n) {
+void SysTick_DelayTicks(uint64_t n) {
 	g_systickCounter = n;
 	while (g_systickCounter > 0);
 }
