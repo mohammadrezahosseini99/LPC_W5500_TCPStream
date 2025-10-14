@@ -5,7 +5,7 @@ This project provides a reliable real-time data streaming framework over TCP, id
 ---
 
 ## 🚀 Features
-- Full TCP server using W5500 hardware TCP/IP stack  
+- Lightweight full TCP server using W5500 hardware TCP/IP stack  
 - Automatic **connection / disconnection detection**  
 - Supports IPv4 with static IP configuration
 - Real-time data streaming to and from the microcontroller and client
@@ -13,7 +13,6 @@ This project provides a reliable real-time data streaming framework over TCP, id
 - Easily adaptable to other microcontrollers with minimal changes 
 - Stable SPI communication up to 80 MHz  
 - Link status monitoring (PHY check)  
-- Lightweight and fully interrupt-driven design  
 - Easy to integrate into larger embedded systems  
 
 ---
@@ -103,3 +102,4 @@ Embedded Systems Engineer (Hardware & Firmware)
 mrh9977@gmail.com  
 https://github.com/mohammadrezahosseini99  
 [LinkedIn](https://www.linkedin.com/in/mohammadreza-hosseinii)  
+
