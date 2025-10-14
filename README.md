@@ -99,7 +99,7 @@ You’re free to use, modify, and distribute this code with attribution.
 
 ## 👤 Author
 **Mohammadreza Hosseini**  
-Embedded Hardware & Firmware Engineer  
-mrh9977@gmail.com
-https://github.com/mohammadrezahosseini99
-linkedin.com/in/mohammadreza-hosseinii
+Embedded Systems Engineer (Hardware & Firmware)
+mrh9977@gmail.com  
+https://github.com/mohammadrezahosseini99  
+[LinkedIn](https://www.linkedin.com/in/mohammadreza-hosseinii)
