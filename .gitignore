@@ -52,6 +52,7 @@ __Previews/
 *.axf
 *.lnp
 *.sct
+*.default_mex
 .mcuxpressoide_packages_support/
 .metadata/
 Release/

@@ -18,12 +18,12 @@
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
-#define EXAMPLE_SPI_MASTER          SPI6
-#define EXAMPLE_SPI_MASTER_IRQ      FLEXCOMM6_IRQn
-#define EXAMPLE_SPI_MASTER_CLK_SRC  kCLOCK_Flexcomm6
-#define EXAMPLE_SPI_MASTER_CLK_FREQ CLOCK_GetFlexCommClkFreq(6)
-#define EXAMPLE_SPI_SSEL            1
-#define EXAMPLE_SPI_SPOL            kSPI_SpolActiveAllLow
+#define W5500_SPI_MASTER          SPI6
+#define W5500_SPI_MASTER_IRQ      FLEXCOMM6_IRQn
+#define W5500_SPI_MASTER_CLK_SRC  kCLOCK_Flexcomm6
+#define W5500_SPI_MASTER_CLK_FREQ CLOCK_GetFlexCommClkFreq(6)
+#define W5500_SPI_SSEL            1
+#define W5500_SPI_SPOL            kSPI_SpolActiveAllLow
 
 /*******************************************************************************
  * Prototypes
@@ -89,35 +89,30 @@ int main(void)
 	SysTick_DelayTicks(500);
 
     SPI_MasterGetDefaultConfig(&userConfig);
-    srcFreq            = EXAMPLE_SPI_MASTER_CLK_FREQ;
-    userConfig.sselNum = (spi_ssel_t)EXAMPLE_SPI_SSEL;
-    userConfig.sselPol = (spi_spol_t)EXAMPLE_SPI_SPOL;
-    userConfig.baudRate_Bps = 20000000U;
-    SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq);
-    SPI_MasterTransferCreateHandle(EXAMPLE_SPI_MASTER, &spi_handle, w5500_spi_Callback, NULL);
+    srcFreq            = W5500_SPI_MASTER_CLK_FREQ;
+    userConfig.sselNum = (spi_ssel_t)W5500_SPI_SSEL;
+    userConfig.sselPol = (spi_spol_t)W5500_SPI_SPOL;
+    userConfig.baudRate_Bps = 60000000U;
+    SPI_MasterInit(W5500_SPI_MASTER, &userConfig, srcFreq);
+    SPI_MasterTransferCreateHandle(W5500_SPI_MASTER, &spi_handle, w5500_spi_Callback, NULL);
 
     W5500_GetDefaultConfig(&myW5500, NULL, NULL, NULL, -1, BOARD_INITPINS_ETH_LINK_PORT, BOARD_INITPINS_ETH_LINK_PIN);
-    while(!W5500_InitFull(&myW5500, EXAMPLE_SPI_MASTER, &spi_handle, SysTick_DelayTicks, NULL));
+    while(!W5500_InitFull(&myW5500, W5500_SPI_MASTER, &spi_handle, SysTick_DelayTicks, NULL));
 
     SysTick_DelayTicks(100);
     uint16_t cnt = 0, a;
-    uint8_t hi[9] = {'H', 'i', ' ', 'B', 'r', 'o', ' ', 33, '\n'}; // "Salam.\n";
+    uint8_t hi[9] = {'H', 'e', 'l', 'l', 'o', ' ', '#', 33, '\n'};
     uint8_t recDataBack[MAX_REC + 10]= {'R', 'e', 'c', 'e', 'i', 'v', 'e', 'd', ':', ' '};
 
     while (1)
     {
     	SysTick_DelayTicks(20);
     	W5500_statusReadBlocking(&myW5500, recDataBack + 10, MAX_REC, &recSize, true);
-    	status = myW5500.status;
     	if(recSize) {
     		a++;
     		W5500_dataWrite(&myW5500, recDataBack, recSize + 10);
     		cnt = 0;
     	}
-//    	if(myW5500.status == tcpError){
-//    		W5500_InitMinBlocking(&myW5500);
-//    		status = myW5500.status;
-//    	}
     	if(myW5500.status == clientConnected) {
 			cnt++;
 			if(cnt >= 50){
