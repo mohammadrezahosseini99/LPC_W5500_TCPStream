@@ -99,8 +99,9 @@ You’re free to use, modify, and distribute this code with attribution.
 ## 👤 Author
 **Mohammadreza Hosseini**  
 Embedded Systems Engineer (Hardware & Firmware)  
-[mrh9977@gmail.com](mailto:mrh9977@gmail.com)  
+[Email](mailto:mrh9977@gmail.com)  
 [GitHub](https://github.com/mohammadrezahosseini99)  
 [LinkedIn](https://www.linkedin.com/in/mohammadreza-hosseinii)  
+
 
 
