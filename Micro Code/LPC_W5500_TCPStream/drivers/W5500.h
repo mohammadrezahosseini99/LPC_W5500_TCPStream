@@ -6,7 +6,7 @@
  // |                                                | //
  // -------------------------------------------------- */
 
-// Version: 1.1
+// Version: 1.2
 
 #ifndef __W5500_H
 #define __W5500_H
@@ -113,6 +113,7 @@ typedef struct {
 	W5500_con_t con;
 	W5500_portIP_t portIP;
 	volatile W5500_status_t status;
+	volatile uint16_t txAddr;
 	void (*delay_ms)(uint64_t ms);
 	void (*delay_us)(uint64_t us);
 } W5500_t;
@@ -124,6 +125,7 @@ void W5500_InitMinBlocking(W5500_t *instance);
 void W5500_spiCallBack(W5500_t *instance);
 bool W5500_statusReadBlocking(W5500_t *instance, uint8_t *data, uint16_t maxDataSize, uint16_t *dataSize, bool autoInit);
 uint16_t W5500_dataRead(W5500_t *instance, uint8_t *data, uint16_t maxDataSize);
+bool W5500_checkTXBuff(W5500_t *instance, uint16_t dataSize);
 void W5500_dataWrite(W5500_t *instance, uint8_t *data, uint16_t dataSize);
 
 void _W5500_regWrite(W5500_t *instance, uint16_t reg, uint8_t blockSel, uint8_t data, bool blocking);

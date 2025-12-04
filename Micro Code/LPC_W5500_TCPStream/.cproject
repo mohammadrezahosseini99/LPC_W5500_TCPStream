@@ -296,7 +296,7 @@
 								<option id="com.crt.advproject.link.gcc.lto.222157650" name="Enable Link-time optimization (-flto)" superClass="com.crt.advproject.link.gcc.lto"/>
 								<option id="com.crt.advproject.link.gcc.lto.optmization.level.1517127280" name="Link-time optimization level" superClass="com.crt.advproject.link.gcc.lto.optmization.level"/>
 								<option id="com.crt.advproject.link.manage.156220188" name="Manage linker script" superClass="com.crt.advproject.link.manage" value="true" valueType="boolean"/>
-								<option id="com.crt.advproject.link.script.641696695" name="Linker script" superClass="com.crt.advproject.link.script" value="W5500_Tester_Debug.ld" valueType="string"/>
+								<option id="com.crt.advproject.link.script.641696695" name="Linker script" superClass="com.crt.advproject.link.script" value="LPC_W5500_TCPStream_Debug.ld" valueType="string"/>
 								<option id="com.crt.advproject.link.scriptdir.1517643688" name="Script path" superClass="com.crt.advproject.link.scriptdir"/>
 								<option id="com.crt.advproject.link.crpenable.189226996" name="Enable automatic placement of Code Read Protection field in image" superClass="com.crt.advproject.link.crpenable" value="true" valueType="boolean"/>
 								<option id="com.crt.advproject.link.flashconfigenable.157472089" name="Enable automatic placement of Flash Configuration field in image" superClass="com.crt.advproject.link.flashconfigenable" value="true" valueType="boolean"/>
@@ -628,7 +628,7 @@
 								<option id="com.crt.advproject.link.gcc.lto.optmization.level.530599561" name="Link-time optimization level" superClass="com.crt.advproject.link.gcc.lto.optmization.level"/>
 								<option id="com.crt.advproject.link.fpu.264914727" name="Floating point" superClass="com.crt.advproject.link.fpu" value="com.crt.advproject.link.fpu.fpv4.hard" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.manage.1513387036" name="Manage linker script" superClass="com.crt.advproject.link.manage" value="true" valueType="boolean"/>
-								<option id="com.crt.advproject.link.script.1172863150" name="Linker script" superClass="com.crt.advproject.link.script" value="W5500_Tester_Release.ld" valueType="string"/>
+								<option id="com.crt.advproject.link.script.1172863150" name="Linker script" superClass="com.crt.advproject.link.script" value="LPC_W5500_TCPStream_Release.ld" valueType="string"/>
 								<option id="com.crt.advproject.link.scriptdir.464360081" name="Script path" superClass="com.crt.advproject.link.scriptdir"/>
 								<option id="com.crt.advproject.link.crpenable.394364221" name="Enable automatic placement of Code Read Protection field in image" superClass="com.crt.advproject.link.crpenable" value="true" valueType="boolean"/>
 								<option id="com.crt.advproject.link.flashconfigenable.930189812" name="Enable automatic placement of Flash Configuration field in image" superClass="com.crt.advproject.link.flashconfigenable" value="true" valueType="boolean"/>

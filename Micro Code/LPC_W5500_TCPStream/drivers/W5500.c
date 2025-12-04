@@ -1,6 +1,6 @@
 #include "W5500.h"
 
-// Version: 1.1
+// Version: 1.2
 
 void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, uint8_t *MAC, int32_t port, uint32_t linkPort, uint32_t linkPin) {
 	if(IPv4 == NULL){
@@ -198,7 +198,12 @@ bool W5500_statusReadBlocking(W5500_t *instance, uint8_t *data, uint16_t maxData
 		_W5500_regsRead(instance, W5500_SN_IR, W5500_SOCKET_REGS(0), status, 2, true);
 		if((wsr->status == W5500_SR_ESTABLISHED) && (!((GPIO_PinRead(GPIO, instance->con.linkPort, instance->con.linkPin) == 1) || (wsr->timeout)))) {
 			ret = true;
-			instance->status = clientConnected;
+			if(instance->status != clientConnected) {
+				static uint8_t txWDP8[2];
+				_W5500_regsRead(instance, W5500_SN_TX_WR_S, W5500_SOCKET_REGS(0), txWDP8, 2, true);
+				instance->txAddr = (((uint32_t)txWDP8[0]) << 8) | (((uint32_t)txWDP8[1]) << 0);
+				instance->status = clientConnected;
+			}
 			if(wsr->recv) {
 				instance->status = dataReceived;
 				if((maxDataSize > 0) && (data != NULL)) {
@@ -246,20 +251,29 @@ uint16_t W5500_dataRead(W5500_t *instance, uint8_t *data, uint16_t maxDataSize) 
 	return dataSize;
 }
 
-void W5500_dataWrite(W5500_t *instance, uint8_t *data, uint16_t dataSize) {
-	uint32_t txWDP16;
-	static uint8_t txWDP8[2];
-	_W5500_regsRead(instance, W5500_SN_TX_WR_S, W5500_SOCKET_REGS(0), txWDP8, 2, true);
-	txWDP16 = (((uint32_t)txWDP8[0]) << 8) | (((uint32_t)txWDP8[1]) << 0);
-	if((txWDP16 + dataSize) > 0xFFFF) {
-		_W5500_regsWrite(instance, txWDP16, W5500_SOCKET_TX_BUFF(0), data, ((0xFFFF - txWDP16) + 1), true);
-		_W5500_regsWrite(instance, 0, W5500_SOCKET_TX_BUFF(0), data + ((0xFFFF - txWDP16) + 1), dataSize - ((0xFFFF - txWDP16) + 1), true);
+bool W5500_checkTXBuff(W5500_t *instance, uint16_t dataSize) {
+	static uint8_t fs[2];
+	uint16_t freesize = 0;
+	_W5500_regsRead(instance, W5500_SN_TX_FSR_S, W5500_SOCKET_REGS(0), fs, 2, true);
+	freesize = ((uint16_t)fs[0] << 8) | fs[1];
+	if (freesize >= dataSize) {
+		return true;
 	} else {
-		_W5500_regsWrite(instance, txWDP16, W5500_SOCKET_TX_BUFF(0), data, dataSize, true);
+		return false;
 	}
-	txWDP16 += dataSize;
-	txWDP8[0] = (txWDP16 >> 8) & 0xFF;
-	txWDP8[1] = (txWDP16 >> 0) & 0xFF;
+}
+
+void W5500_dataWrite(W5500_t *instance, uint8_t *data, uint16_t dataSize) {
+	static uint8_t txWDP8[2];
+	if((instance->txAddr + dataSize) > 0xFFFF) {
+		_W5500_regsWrite(instance, instance->txAddr, W5500_SOCKET_TX_BUFF(0), data, ((0xFFFF - instance->txAddr) + 1), true);
+		_W5500_regsWrite(instance, 0, W5500_SOCKET_TX_BUFF(0), data + ((0xFFFF - instance->txAddr) + 1), dataSize - ((0xFFFF - instance->txAddr) + 1), true);
+	} else {
+		_W5500_regsWrite(instance, instance->txAddr, W5500_SOCKET_TX_BUFF(0), data, dataSize, true);
+	}
+	instance->txAddr += dataSize;
+	txWDP8[0] = (instance->txAddr >> 8) & 0xFF;
+	txWDP8[1] = (instance->txAddr >> 0) & 0xFF;
 	_W5500_regsWrite(instance, W5500_SN_TX_WR_S, W5500_SOCKET_REGS(0), txWDP8, 2, true);
 	_W5500_socketCommand(instance, 0, W5500_CR_SEND, true);
 }

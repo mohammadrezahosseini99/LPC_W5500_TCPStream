@@ -108,12 +108,12 @@ int main(void)
     {
     	SysTick_DelayTicks(20);
     	W5500_statusReadBlocking(&myW5500, recDataBack + 10, MAX_REC, &recSize, true);
-    	if(recSize) {
+    	if((recSize) && (W5500_checkTXBuff(&myW5500, recSize + 10))) {
     		a++;
     		W5500_dataWrite(&myW5500, recDataBack, recSize + 10);
     		cnt = 0;
     	}
-    	if(myW5500.status == clientConnected) {
+    	if((myW5500.status == clientConnected) && (W5500_checkTXBuff(&myW5500, 9))) {
 			cnt++;
 			if(cnt >= 50){
 				cnt = 0;
