@@ -6,7 +6,7 @@
  // |                                                | //
  // -------------------------------------------------- */
 
-// Version: 1.2
+// Version: 1.2.2
 
 #ifndef __W5500_H
 #define __W5500_H
@@ -127,24 +127,6 @@ bool W5500_statusReadBlocking(W5500_t *instance, uint8_t *data, uint16_t maxData
 uint16_t W5500_dataRead(W5500_t *instance, uint8_t *data, uint16_t maxDataSize);
 bool W5500_checkTXBuff(W5500_t *instance, uint16_t dataSize);
 void W5500_dataWrite(W5500_t *instance, uint8_t *data, uint16_t dataSize);
-
-void _W5500_regWrite(W5500_t *instance, uint16_t reg, uint8_t blockSel, uint8_t data, bool blocking);
-uint8_t _W5500_regRead(W5500_t *instance, uint16_t reg, uint8_t blockSel);
-void _W5500_regsWrite(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking);
-void _W5500_regsRead(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking);
-void _W5500_setIPAdd(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP);
-
-static inline void _W5500_reset(W5500_t *instance) {
-	_W5500_regWrite(instance, W5500_REG_MR, W5500_COMMON_REGS, 0x80, true);
-}
-
-static inline bool _W5500_whoAmI(W5500_t *instance) {
-	return (_W5500_regRead(instance, W5500_REG_CHIP_ID, W5500_COMMON_REGS) == W5500_CHIP_ID);
-}
-
-static inline void _W5500_socketCommand(W5500_t *instance, uint8_t socketNum, uint8_t command, bool blocking) {
-	_W5500_regWrite(instance, W5500_SN_CR, W5500_SOCKET_REGS(socketNum), command, blocking);
-}
 
 #ifdef __cplusplus
 }

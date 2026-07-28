@@ -1,6 +1,15 @@
 #include "W5500.h"
 
-// Version: 1.2
+// Version: 1.2.2
+
+static void _W5500_regWrite(W5500_t *instance, uint16_t reg, uint8_t blockSel, uint8_t data, bool blocking);
+static uint8_t _W5500_regRead(W5500_t *instance, uint16_t reg, uint8_t blockSel);
+static void _W5500_regsWrite(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking);
+static void _W5500_regsRead(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking);
+static void _W5500_setIPAdd(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP);
+static void _W5500_reset(W5500_t *instance);
+static bool _W5500_whoAmI(W5500_t *instance);
+static void _W5500_socketCommand(W5500_t *instance, uint8_t socketNum, uint8_t command, bool blocking);
 
 void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, uint8_t *MAC, int32_t port, uint32_t linkPort, uint32_t linkPin) {
 	if(IPv4 == NULL){
@@ -95,7 +104,7 @@ void _W5500_regWrite(W5500_t *instance, uint16_t reg, uint8_t blockSel, uint8_t 
 	}
 }
 
-uint8_t _W5500_regRead(W5500_t *instance, uint16_t reg, uint8_t blockSel) {
+static uint8_t _W5500_regRead(W5500_t *instance, uint16_t reg, uint8_t blockSel) {
 	spi_transfer_t xfer = {0};
 	static uint8_t tx[4];
 	tx[0] = ((reg >> 8) & 0xFF);
@@ -113,7 +122,7 @@ uint8_t _W5500_regRead(W5500_t *instance, uint16_t reg, uint8_t blockSel) {
 	return rx[3];
 }
 
-void _W5500_regsWrite(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking) {
+static void _W5500_regsWrite(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking) {
 	spi_transfer_t xfer = {0};
 	static uint8_t tx[3];
 	tx[0] = ((startReg >> 8) & 0xFF);
@@ -132,7 +141,7 @@ void _W5500_regsWrite(W5500_t *instance, uint16_t startReg, uint8_t blockSel, ui
 	}
 }
 
-void _W5500_regsRead(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking) {
+static void _W5500_regsRead(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking) {
 	spi_transfer_t xfer = {0};
 	static uint8_t tx[3];
 	tx[0] = ((startReg >> 8) & 0xFF);
@@ -172,7 +181,7 @@ void W5500_spiCallBack(W5500_t *instance) {
 	}
 }
 
-void _W5500_setIPAdd(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP) {
+static void _W5500_setIPAdd(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP) {
 	memcpy(instance->portIP.GWIP, GWIP, 4);
 	_W5500_regsWrite(instance, W5500_REG_GAR_S, W5500_COMMON_REGS, instance->portIP.GWIP, 4, true);		// GWIP Address
 	memcpy(instance->portIP.IPv4, IPv4, 4);
@@ -276,4 +285,16 @@ void W5500_dataWrite(W5500_t *instance, uint8_t *data, uint16_t dataSize) {
 	txWDP8[1] = (instance->txAddr >> 0) & 0xFF;
 	_W5500_regsWrite(instance, W5500_SN_TX_WR_S, W5500_SOCKET_REGS(0), txWDP8, 2, true);
 	_W5500_socketCommand(instance, 0, W5500_CR_SEND, true);
+}
+
+void _W5500_reset(W5500_t *instance) {
+	_W5500_regWrite(instance, W5500_REG_MR, W5500_COMMON_REGS, 0x80, true);
+}
+
+static bool _W5500_whoAmI(W5500_t *instance) {
+	return (_W5500_regRead(instance, W5500_REG_CHIP_ID, W5500_COMMON_REGS) == W5500_CHIP_ID);
+}
+
+static void _W5500_socketCommand(W5500_t *instance, uint8_t socketNum, uint8_t command, bool blocking) {
+	_W5500_regWrite(instance, W5500_SN_CR, W5500_SOCKET_REGS(socketNum), command, blocking);
 }
