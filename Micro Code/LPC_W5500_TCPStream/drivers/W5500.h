@@ -6,7 +6,7 @@
  // |                                                | //
  // -------------------------------------------------- */
 
-// Version: 1.2.2
+// Version: 2.0.0
 
 #ifndef __W5500_H
 #define __W5500_H
@@ -77,39 +77,46 @@ extern "C" {
 
 
 // Typedef
-typedef enum {
-	do_nothing,
-	write_regs,
-	read_regs,
-	doing_regs
+typedef enum W5500_return {
+	W5500_InvalidArgument = 0,
+	W5500_fail = 1,
+	W5500_success = 2
+} W5500_return_t;
+
+typedef enum W5500_spiStatus {
+	W5500_do_nothing,
+	W5500_write_regs,
+	W5500_read_regs,
+	W5500_doing_regs
 } W5500_spiStatus_t;
 
-typedef enum {
-	config,
-	tcpError,
-	clientWait,
-	clientConnected,
-	dataReceived
+typedef enum W5500_status {
+	W5500_tcpError,
+	W5500_clientWait,
+	W5500_clientConnected,
+	W5500_dataReceived
 } W5500_status_t;
 
-typedef struct {
+typedef struct W5500_con {
 	SPI_Type *base;
 	spi_master_handle_t *handle;
 	uint8_t *regsAdd;
+	uint8_t srcBuff[4];
+	uint8_t destBuff[4];
 	size_t regsSize;
 	volatile W5500_spiStatus_t spiStatus;
 	uint32_t linkPort;
 	uint32_t linkPin;
 } W5500_con_t;
 
-typedef struct {
+typedef struct W5500_portIP {
 	uint8_t GWIP[4];
 	uint8_t IPv4[4];
 	uint8_t MAC[6];
 	uint16_t port;
 } W5500_portIP_t;
 
-typedef struct {
+typedef struct W5500 {
 	W5500_con_t con;
 	W5500_portIP_t portIP;
 	volatile W5500_status_t status;
@@ -119,8 +126,8 @@ typedef struct {
 } W5500_t;
 
 // Functions
-void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, uint8_t *MAC, int32_t port, uint32_t linkPort, uint32_t linkPin);
-bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint64_t ms), void (*delay_us)(uint64_t us));
+W5500_return_t W5500_GetDefaultConfig(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint64_t ms), void (*delay_us)(uint64_t us), uint32_t linkPort, uint32_t linkPin, uint8_t *IPv4, uint8_t *GWIP, uint8_t *MAC, int32_t port);
+W5500_return_t W5500_InitFull(W5500_t *instance);
 void W5500_InitMinBlocking(W5500_t *instance);
 void W5500_spiCallBack(W5500_t *instance);
 bool W5500_statusReadBlocking(W5500_t *instance, uint8_t *data, uint16_t maxDataSize, uint16_t *dataSize, bool autoInit);

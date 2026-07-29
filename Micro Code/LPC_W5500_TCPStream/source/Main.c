@@ -96,8 +96,12 @@ int main(void)
     SPI_MasterInit(W5500_SPI_MASTER, &userConfig, srcFreq);
     SPI_MasterTransferCreateHandle(W5500_SPI_MASTER, &spi_handle, w5500_spi_Callback, NULL);
 
-    W5500_GetDefaultConfig(&myW5500, NULL, NULL, NULL, -1, BOARD_INITPINS_ETH_LINK_PORT, BOARD_INITPINS_ETH_LINK_PIN);
-    while(!W5500_InitFull(&myW5500, W5500_SPI_MASTER, &spi_handle, SysTick_DelayTicks, NULL));
+    if(W5500_GetDefaultConfig(&myW5500, W5500_SPI_MASTER, &spi_handle, SysTick_DelayTicks, NULL, BOARD_INITPINS_ETH_LINK_PORT, BOARD_INITPINS_ETH_LINK_PIN, NULL, NULL, NULL, -1) == W5500_InvalidArgument) {
+		while(1);
+	}
+    while(W5500_InitFull(&myW5500) != W5500_success) {
+		SysTick_DelayTicks(50);
+	}
 
     SysTick_DelayTicks(100);
     uint16_t cnt = 0, a;
@@ -113,7 +117,7 @@ int main(void)
     		W5500_dataWrite(&myW5500, recDataBack, recSize + 10);
     		cnt = 0;
     	}
-    	if((myW5500.status == clientConnected) && (W5500_checkTXBuff(&myW5500, 9))) {
+    	if((myW5500.status == W5500_clientConnected) && (W5500_checkTXBuff(&myW5500, 9))) {
 			cnt++;
 			if(cnt >= 50){
 				cnt = 0;

@@ -1,7 +1,5 @@
 #include "W5500.h"
 
-// Version: 1.2.2
-
 static void _W5500_regWrite(W5500_t *instance, uint16_t reg, uint8_t blockSel, uint8_t data, bool blocking);
 static uint8_t _W5500_regRead(W5500_t *instance, uint16_t reg, uint8_t blockSel);
 static void _W5500_regsWrite(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking);
@@ -11,7 +9,17 @@ static void _W5500_reset(W5500_t *instance);
 static bool _W5500_whoAmI(W5500_t *instance);
 static void _W5500_socketCommand(W5500_t *instance, uint8_t socketNum, uint8_t command, bool blocking);
 
-void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, uint8_t *MAC, int32_t port, uint32_t linkPort, uint32_t linkPin) {
+W5500_return_t W5500_GetDefaultConfig(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint64_t ms), void (*delay_us)(uint64_t us), uint32_t linkPort, uint32_t linkPin, uint8_t *IPv4, uint8_t *GWIP, uint8_t *MAC, int32_t port) {
+	assert(!(((NULL == instance) || (NULL == base) || (NULL == handle)) || ((NULL == delay_ms) && (NULL == delay_us))));
+	if(((NULL == instance) || (NULL == base) || (NULL == handle)) || ((NULL == delay_ms) && (NULL == delay_us))) {
+		return W5500_InvalidArgument;
+	}
+	instance->con.base = base;
+	instance->con.handle = handle;
+	instance->con.linkPort = linkPort;
+	instance->con.linkPin = linkPin;
+	instance->delay_ms = delay_ms;
+	instance->delay_us = delay_us;
 	if(IPv4 == NULL){
 		uint8_t IP[4] = W5500_DEFAULT_IPV4_ADDRESS;
 		memcpy(instance->portIP.IPv4, IP, 4);
@@ -35,28 +43,26 @@ void W5500_GetDefaultConfig(W5500_t *instance, uint8_t *IPv4, uint8_t *GWIP, uin
 	} else {
 		instance->portIP.port = port;
 	}
-	instance->con.linkPort = linkPort;
-	instance->con.linkPin = linkPin;
+	return W5500_success;
 }
 
-bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *handle, void (*delay_ms)(uint64_t ms), void (*delay_us)(uint64_t us)) {
+W5500_return_t W5500_InitFull(W5500_t *instance) {
+	assert(!(NULL == instance));
+	if(NULL == instance) {
+		return W5500_InvalidArgument;
+	}
 	uint8_t subr[4] = {255, 255, 255, 0};
 	uint8_t port[2] = {((instance->portIP.port >> 8) & 0xFF), ((instance->portIP.port >> 0) & 0xFF)};
 	uint8_t dip[4] = {192, 168, 100, 22};
 	uint8_t rtr[2] = {((1000 >> 8) & 0xFF), ((1000 >> 0) & 0xFF)};
-	instance->con.base = base;
-	instance->con.handle = handle;
-	instance->delay_ms = delay_ms;
-	instance->delay_us = delay_us;
-	instance->con.spiStatus = do_nothing;
-	instance->status = config;
+	instance->con.spiStatus = W5500_do_nothing;
 	_W5500_reset(instance);
 	if(instance->delay_ms != NULL)
 		instance->delay_ms(300);
-	if(instance->delay_us != NULL)
+	else if(instance->delay_us != NULL)
 		instance->delay_us(300 * 1000);
 	if(!_W5500_whoAmI(instance))
-		return false;
+		return W5500_fail;
 	_W5500_regWrite(instance,	W5500_REG_PHYCFGR,		W5500_COMMON_REGS,		0xD8, 	 				true);			// PHY set 100Mbs
 	_W5500_regsWrite(instance,	W5500_REG_SHAR_S,		W5500_COMMON_REGS,		instance->portIP.MAC,	6,	true);	// MAC Address
 	_W5500_regsWrite(instance,	W5500_REG_SUBR_S,		W5500_COMMON_REGS,		subr,	 				4, 	true);	// Subnet Mask Address
@@ -72,112 +78,108 @@ bool W5500_InitFull(W5500_t *instance, SPI_Type *base, spi_master_handle_t *hand
 	_W5500_socketCommand(instance, 0, W5500_CR_CLOSE, true);
 	_W5500_socketCommand(instance, 0, W5500_CR_OPEN, true);
 	_W5500_socketCommand(instance, 0, W5500_CR_LISTEN, true);
-	instance->status = clientWait;
-	return true;
+	instance->status = W5500_clientWait;
+	return W5500_success;
 }
 
 void W5500_InitMinBlocking(W5500_t *instance) {
-	instance->status = config;
+	assert(!(NULL == instance));
 	_W5500_regWrite(instance, W5500_SN_IR, W5500_SOCKET_REGS(0), 0x1F, true);
 	_W5500_socketCommand(instance, 0, W5500_CR_CLOSE, true);
 	_W5500_socketCommand(instance, 0, W5500_CR_OPEN, true);
 	_W5500_socketCommand(instance, 0, W5500_CR_LISTEN, true);
-	instance->status = clientWait;
+	instance->status = W5500_clientWait;
 }
 
 void _W5500_regWrite(W5500_t *instance, uint16_t reg, uint8_t blockSel, uint8_t data, bool blocking) {
+	while (instance->con.spiStatus != W5500_do_nothing);
+	instance->con.srcBuff[0] = ((reg >> 8) & 0xFF);
+	instance->con.srcBuff[1] = ((reg >> 0) & 0xFF);
+	instance->con.srcBuff[2] = 0x04 | (blockSel << 3);
+	instance->con.srcBuff[3] = data;
+	instance->con.spiStatus = W5500_doing_regs;
 	spi_transfer_t xfer = {0};
-	static uint8_t tx[4];
-	tx[0] = ((reg >> 8) & 0xFF);
-	tx[1] = ((reg >> 0) & 0xFF);
-	tx[2] = 0x04 | (blockSel << 3);
-	tx[3] = data;
-	xfer.txData = tx;
+	xfer.txData = instance->con.srcBuff;
 	xfer.rxData = NULL;
 	xfer.dataSize = 4;
 	xfer.configFlags = kSPI_FrameAssert;
-	while (instance->con.spiStatus != do_nothing);
-	instance->con.spiStatus = doing_regs;
 	while(SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer) != kStatus_Success);
 	if(blocking) {
-		while (instance->con.spiStatus != do_nothing);
+		while (instance->con.spiStatus != W5500_do_nothing);
 	}
 }
 
 static uint8_t _W5500_regRead(W5500_t *instance, uint16_t reg, uint8_t blockSel) {
+	while (instance->con.spiStatus != W5500_do_nothing);
+	instance->con.srcBuff[0] = ((reg >> 8) & 0xFF);
+	instance->con.srcBuff[1] = ((reg >> 0) & 0xFF);
+	instance->con.srcBuff[2] = 0x00 | (blockSel << 3);
+	instance->con.spiStatus = W5500_doing_regs;
 	spi_transfer_t xfer = {0};
-	static uint8_t tx[4];
-	tx[0] = ((reg >> 8) & 0xFF);
-	tx[1] = ((reg >> 0) & 0xFF);
-	tx[2] = 0x00 | (blockSel << 3);
-	static uint8_t rx[4];
-	xfer.txData = tx;
-	xfer.rxData = rx;
+	xfer.txData = instance->con.srcBuff;
+	xfer.rxData = instance->con.destBuff;
 	xfer.dataSize = 4;
 	xfer.configFlags = kSPI_FrameAssert;
-	while (instance->con.spiStatus != do_nothing);
-	instance->con.spiStatus = doing_regs;
 	while(SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer) != kStatus_Success);
-	while (instance->con.spiStatus != do_nothing);
-	return rx[3];
+	while (instance->con.spiStatus != W5500_do_nothing);
+	return instance->con.destBuff[3];
 }
 
 static void _W5500_regsWrite(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking) {
-	spi_transfer_t xfer = {0};
-	static uint8_t tx[3];
-	tx[0] = ((startReg >> 8) & 0xFF);
-	tx[1] = ((startReg >> 0) & 0xFF);
-	tx[2] = 0x04 | (blockSel << 3);
-	xfer.txData = tx;
-	xfer.rxData = NULL;
-	xfer.dataSize = 3;
+	while (instance->con.spiStatus != W5500_do_nothing);
+	instance->con.srcBuff[0] = ((startReg >> 8) & 0xFF);
+	instance->con.srcBuff[1] = ((startReg >> 0) & 0xFF);
+	instance->con.srcBuff[2] = 0x04 | (blockSel << 3);
+	instance->con.spiStatus = W5500_write_regs;
 	instance->con.regsAdd = data;
 	instance->con.regsSize = size;
-	while (instance->con.spiStatus != do_nothing);
-	instance->con.spiStatus = write_regs;
+	spi_transfer_t xfer = {0};
+	xfer.txData = instance->con.srcBuff;
+	xfer.rxData = NULL;
+	xfer.dataSize = 3;
 	while(SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer) != kStatus_Success);
 	if(blocking) {
-		while (instance->con.spiStatus != do_nothing);
+		while (instance->con.spiStatus != W5500_do_nothing);
 	}
 }
 
 static void _W5500_regsRead(W5500_t *instance, uint16_t startReg, uint8_t blockSel, uint8_t *data, size_t size, bool blocking) {
-	spi_transfer_t xfer = {0};
-	static uint8_t tx[3];
-	tx[0] = ((startReg >> 8) & 0xFF);
-	tx[1] = ((startReg >> 0) & 0xFF);
-	tx[2] = 0x00 | (blockSel << 3);
-	xfer.txData = tx;
-	xfer.rxData = NULL;
-	xfer.dataSize = 3;
+	while (instance->con.spiStatus != W5500_do_nothing);
+	instance->con.srcBuff[0] = ((startReg >> 8) & 0xFF);
+	instance->con.srcBuff[1] = ((startReg >> 0) & 0xFF);
+	instance->con.srcBuff[2] = 0x00 | (blockSel << 3);
+	instance->con.spiStatus = W5500_read_regs;
 	instance->con.regsAdd = data;
 	instance->con.regsSize = size;
-	while (instance->con.spiStatus != do_nothing);
-	instance->con.spiStatus = read_regs;
+	spi_transfer_t xfer = {0};
+	xfer.txData = instance->con.srcBuff;
+	xfer.rxData = NULL;
+	xfer.dataSize = 3;
 	while(SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer) != kStatus_Success);
 	if(blocking) {
-		while (instance->con.spiStatus != do_nothing);
+		while (instance->con.spiStatus != W5500_do_nothing);
 	}
 }
 
 void W5500_spiCallBack(W5500_t *instance) {
-	spi_transfer_t xfer = {0};
-	if(instance->con.spiStatus == write_regs) {
+	if(instance->con.spiStatus == W5500_write_regs) {
+		instance->con.spiStatus = W5500_doing_regs;
+		spi_transfer_t xfer = {0};
 		xfer.txData = instance->con.regsAdd;
 		xfer.rxData = NULL;
 		xfer.dataSize = instance->con.regsSize;
 		xfer.configFlags = kSPI_FrameAssert;
-		instance->con.spiStatus = doing_regs;
 		SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer);
-	} else if (instance->con.spiStatus == read_regs) {
+	} else if (instance->con.spiStatus == W5500_read_regs) {
+		instance->con.spiStatus = W5500_doing_regs;
+		spi_transfer_t xfer = {0};
 		xfer.txData = NULL;
 		xfer.rxData = instance->con.regsAdd;
 		xfer.dataSize = instance->con.regsSize;
 		xfer.configFlags = kSPI_FrameAssert;
-		instance->con.spiStatus = doing_regs;
 		SPI_MasterTransferNonBlocking(instance->con.base, instance->con.handle, &xfer);
 	} else {
-		instance->con.spiStatus = do_nothing;
+		instance->con.spiStatus = W5500_do_nothing;
 	}
 }
 
@@ -200,32 +202,32 @@ bool W5500_statusReadBlocking(W5500_t *instance, uint8_t *data, uint16_t maxData
 	} W5500_statusRead_t;
 	bool ret = false;
 	W5500_statusRead_t* wsr;
-	static uint8_t status[2];
+	uint8_t status[2];
 	*dataSize = 0;
 	wsr = (W5500_statusRead_t*)status;
-	if(instance->status != tcpError) {
+	if(instance->status != W5500_tcpError) {
 		_W5500_regsRead(instance, W5500_SN_IR, W5500_SOCKET_REGS(0), status, 2, true);
 		if((wsr->status == W5500_SR_ESTABLISHED) && (!((GPIO_PinRead(GPIO, instance->con.linkPort, instance->con.linkPin) == 1) || (wsr->timeout)))) {
 			ret = true;
-			if(instance->status != clientConnected) {
-				static uint8_t txWDP8[2];
+			if(instance->status != W5500_clientConnected) {
+				uint8_t txWDP8[2];
 				_W5500_regsRead(instance, W5500_SN_TX_WR_S, W5500_SOCKET_REGS(0), txWDP8, 2, true);
 				instance->txAddr = (((uint32_t)txWDP8[0]) << 8) | (((uint32_t)txWDP8[1]) << 0);
-				instance->status = clientConnected;
+				instance->status = W5500_clientConnected;
 			}
 			if(wsr->recv) {
-				instance->status = dataReceived;
+				instance->status = W5500_dataReceived;
 				if((maxDataSize > 0) && (data != NULL)) {
 					*dataSize = W5500_dataRead(instance, data, maxDataSize);
 				}
 			}
 		} else if((wsr->status == W5500_SR_LISTEN) || (wsr->status == W5500_SR_SYNRECV)){
-			instance->status = clientWait;
+			instance->status = W5500_clientWait;
 		} else {
-			instance->status = tcpError;
+			instance->status = W5500_tcpError;
 		}
 	}
-	if((autoInit) && (instance->status == tcpError)) {
+	if((autoInit) && (instance->status == W5500_tcpError)) {
 		W5500_InitMinBlocking(instance);
 	}
 	return ret;
@@ -234,15 +236,15 @@ bool W5500_statusReadBlocking(W5500_t *instance, uint8_t *data, uint16_t maxData
 uint16_t W5500_dataRead(W5500_t *instance, uint8_t *data, uint16_t maxDataSize) {
 	uint16_t dataSize;
 	uint32_t rxRDP16;
-	static uint8_t regs[4];
-	static uint8_t rxRDP8[2];
+	uint8_t regs[4];
+	uint8_t rxRDP8[2];
 	_W5500_regsRead(instance, W5500_SN_RX_RSR_S, W5500_SOCKET_REGS(0), regs, 4, true);
 	dataSize = (((uint16_t)regs[0]) << 8) | (((uint16_t)regs[1]) << 0);
 	if(dataSize <= maxDataSize) {
-		instance->status = clientConnected;
+		instance->status = W5500_clientConnected;
 		_W5500_regWrite(instance, W5500_SN_IR, W5500_SOCKET_REGS(0), 0x1F, true);
 	} else {
-		instance->status = dataReceived;
+		instance->status = W5500_dataReceived;
 		dataSize = maxDataSize;
 	}
 	rxRDP16 = (((uint32_t)regs[2]) << 8) | (((uint32_t)regs[3]) << 0);
@@ -261,7 +263,7 @@ uint16_t W5500_dataRead(W5500_t *instance, uint8_t *data, uint16_t maxDataSize) 
 }
 
 bool W5500_checkTXBuff(W5500_t *instance, uint16_t dataSize) {
-	static uint8_t fs[2];
+	uint8_t fs[2];
 	uint16_t freesize = 0;
 	_W5500_regsRead(instance, W5500_SN_TX_FSR_S, W5500_SOCKET_REGS(0), fs, 2, true);
 	freesize = ((uint16_t)fs[0] << 8) | fs[1];
@@ -273,7 +275,7 @@ bool W5500_checkTXBuff(W5500_t *instance, uint16_t dataSize) {
 }
 
 void W5500_dataWrite(W5500_t *instance, uint8_t *data, uint16_t dataSize) {
-	static uint8_t txWDP8[2];
+	uint8_t txWDP8[2];
 	if((instance->txAddr + dataSize) > 0xFFFF) {
 		_W5500_regsWrite(instance, instance->txAddr, W5500_SOCKET_TX_BUFF(0), data, ((0xFFFF - instance->txAddr) + 1), true);
 		_W5500_regsWrite(instance, 0, W5500_SOCKET_TX_BUFF(0), data + ((0xFFFF - instance->txAddr) + 1), dataSize - ((0xFFFF - instance->txAddr) + 1), true);
@@ -287,7 +289,7 @@ void W5500_dataWrite(W5500_t *instance, uint8_t *data, uint16_t dataSize) {
 	_W5500_socketCommand(instance, 0, W5500_CR_SEND, true);
 }
 
-void _W5500_reset(W5500_t *instance) {
+static void _W5500_reset(W5500_t *instance) {
 	_W5500_regWrite(instance, W5500_REG_MR, W5500_COMMON_REGS, 0x80, true);
 }
 
