@@ -36,7 +36,7 @@
 static uint8_t srcBuff[BUFFER_SIZE];
 static uint8_t destBuff[BUFFER_SIZE];
 
-volatile uint64_t g_systickCounter = 0;
+volatile uint32_t g_systickCounter = 0;
 /*******************************************************************************
  * Code
  ******************************************************************************/
@@ -54,7 +54,7 @@ static void w5500_spi_Callback(SPI_Type *base, spi_master_handle_t *handle,
 	W5500_spiCallBack(&myW5500);
 }
 
-void SysTick_DelayTicks(uint64_t n) {
+void SysTick_DelayTicks(uint32_t n) {
 	g_systickCounter = n;
 	while (g_systickCounter > 0);
 }
@@ -96,10 +96,22 @@ int main(void)
     SPI_MasterInit(W5500_SPI_MASTER, &userConfig, srcFreq);
     SPI_MasterTransferCreateHandle(W5500_SPI_MASTER, &spi_handle, w5500_spi_Callback, NULL);
 
-    if(W5500_GetDefaultConfig(&myW5500, W5500_SPI_MASTER, &spi_handle, SysTick_DelayTicks, NULL, BOARD_INITPINS_ETH_LINK_PORT, BOARD_INITPINS_ETH_LINK_PIN, NULL, NULL, NULL, -1) == W5500_InvalidArgument) {
+    /* Init W5500 */
+	W5500_config_t w5500_cfg;
+	if(W5500_getDefaultConfig(&w5500_cfg) == W5500_invalidArgument) {
 		while(1);
 	}
-    while(W5500_InitFull(&myW5500) != W5500_success) {
+	w5500_cfg.spi_base = W5500_SPI_MASTER;
+	w5500_cfg.spi_handle = &spi_handle;
+	w5500_cfg.linkPort = BOARD_INITPINS_ETH_LINK_PORT;
+	w5500_cfg.linkPin = BOARD_INITPINS_ETH_LINK_PIN;
+	w5500_cfg.delay_ms = SysTick_DelayTicks;
+	w5500_cfg.delay_us = NULL;
+//	memcpy(w5500_cfg.macAdd, mac, 4);
+//	memcpy(w5500_cfg.gatewayIPAdd, GWIP, 4);
+//	memcpy(w5500_cfg.IPv4Add, IPv4, 4);
+//	w5500_cfg.tcpPort = ETH_TCP_PORT;
+	while(W5500_init(&myW5500, &w5500_cfg) != W5500_success) {
 		SysTick_DelayTicks(50);
 	}
 
